@@ -11,6 +11,7 @@
 #include "MPU6050.h"
 #include "pid.h"
 #include "MPU_Callibration.h"
+#include "FlashSst26.h"
 
 MPU6050 accelgyro;
 //MPU6050 accelgyro(0x69); // <-- use for AD0 high
