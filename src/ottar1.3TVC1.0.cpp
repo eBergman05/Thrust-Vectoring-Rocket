@@ -12,9 +12,11 @@
 #include "pid.h"
 #include "MPU_Callibration.h"
 #include "FlashSst26.h"
+#include "Adafruit_BMP280.h"
 
 MPU6050 accelgyro;
 //MPU6050 accelgyro(0x69); // <-- use for AD0 high
+Adafruit_BMP280 bmp;
 
 int16_t aX, aY, aZ;
 int16_t gX, gY, gZ;
@@ -29,6 +31,11 @@ int16_t gyroZData[100];
 
 float angleX[100];
 float angleZ[100];
+
+float pressure;
+float altitude;
+
+double data[5];
 
 int count = 0;
 
@@ -163,6 +170,15 @@ void loop() {
     {
         PID(servoX, servoZ, gyroXData, gyroZData, angleX, angleZ, tstep);
     }
+
+    data[0] = angleX[99];
+    data[1] = angleZ[99];
+    data[2] = bmp.readPressure();
+    data[3] = bmp.readAltitude(1050.35);
+    data[4] = millis();
+
+    Serial.println(data[3]);
+
 
     //delay(5);
     
