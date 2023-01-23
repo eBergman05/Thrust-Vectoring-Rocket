@@ -7,16 +7,24 @@
 #include <Arduino.h>
 #include <math.h>
 #include <Servo.h>
+#include <SPI.h>
+#include <SD.h>
 #include "I2Cdev.h"
 #include "MPU6050.h"
 #include "pid.h"
 #include "MPU_Callibration.h"
 #include "FlashSst26.h"
+#include "PrintSerialFlashSst26.h"
 #include "Adafruit_BMP280.h"
 
-MPU6050 accelgyro;
+
 //MPU6050 accelgyro(0x69); // <-- use for AD0 high
+MPU6050 accelgyro;
+
 Adafruit_BMP280 bmp;
+
+FlashSst26 flash;
+PrintSerialFlashSst26 printFlash;
 
 int16_t aX, aY, aZ;
 int16_t gX, gY, gZ;
@@ -61,9 +69,19 @@ int pos = 90; //starting servo position
 #define LEDG 7
 #define buzzer 37
 
+File myFile;
+
 bool blinkState = false;
 
 void setup() {
+
+    pinMode(LEDR, OUTPUT);
+    pinMode(LEDB, OUTPUT);
+    pinMode(LEDG, OUTPUT);
+    pinMode(buzzer, OUTPUT);
+    
+    digitalWrite(LEDB, HIGH);
+
     Wire.begin();
 
     Serial.begin(38400);
@@ -88,28 +106,57 @@ void setup() {
     servoX.write(pos);
     servoZ.write(pos);
 
-    
-    pinMode(LEDR, OUTPUT);
-    pinMode(LEDB, OUTPUT);
-    pinMode(LEDG, OUTPUT);
-    pinMode(buzzer, OUTPUT);
-
-    digitalWrite(LEDB, HIGH);
-    delay(1000);
-    digitalWrite(LEDR, HIGH);
-    digitalWrite(LEDB, LOW);
-
     callibrateMPU(servoX, servoZ, accelgyro);
 
-    digitalWrite(LEDG, HIGH);
-    tone(buzzer, 440);
-    delay(500);
-    noTone(buzzer);
-    delay(500);
-    tone(buzzer, 440);
-    delay(500);
-    noTone(buzzer);
+    successNoise();
 
+    Serial.print("Initializing SD card...");
+
+    if (!SD.begin(4)) 
+    {
+        Serial.println("initialization failed!");
+        while(1);
+    }
+    Serial.println("initializationdone.");
+
+    // open the file. note that only one file can be open at a time,
+    // so you have to close this one before opening another.
+    myFile = SD.open("data.txt", FILE_WRITE);
+
+    // if the file opened okay, write to it:
+    if (myFile) 
+    {
+        Serial.print("Writing to test.txt...");
+        myFile.println("Data: angleX, angleZ, pressure, altitued, time");
+        // close the file:
+        myFile.close();
+        Serial.println("done.");
+    } else {
+        // if the file didn't open, print an error:
+        Serial.println("error opening data.txt");
+        failNoise();
+    }
+
+    // re-open the file for reading:
+    myFile = SD.open("data.txt");
+    if (myFile) 
+    {
+        Serial.println("data.txt:");
+
+        // read from the file until there's nothing else in it:
+        while (myFile.available()) 
+        {
+            Serial.write(myFile.read());
+        }
+        // close the file:
+        myFile.close();
+        successNoise();
+    } else {
+        // if the file didn't open, print an error:
+        Serial.println("error opening data.txt");
+        failNoise();
+    }
+    armedNoise();
 }
 
 void loop() {
@@ -160,11 +207,9 @@ void loop() {
     angleX[99] = angleX[98] + tstep[99]*gX/32800.;
     angleZ[99] = angleZ[98] + tstep[99]*gZ/32800.;
     
-
     Serial.println(angleX[99],10);
     Serial.println(angleZ[99],10);
-    
-    
+
     count++;
     if (count > 100)
     {
@@ -179,11 +224,75 @@ void loop() {
 
     Serial.println(data[3]);
 
-
-    //delay(5);
-    
-    
+    myFile = SD.open("data.txt", FILE_WRITE);
+    for (int n = 0; n < 5; n++)
+    {
+        myFile.print(data[n]);
+        myFile.print("\t");
+    }
+    myFile.println();
+    myFile.close();
+        
     // blink LED to indicate activity
     blinkState = !blinkState;
-    digitalWrite(LEDG, blinkState);
+    digitalWrite(LEDB, blinkState);
+}
+
+void failNoise() 
+{
+    digitalWrite(LEDB, LOW);
+    digitalWrite(LEDG, LOW);
+    digitalWrite(LEDR, HIGH);
+    tone(buzzer, 440);
+    delay(500);
+    tone(buzzer, 293.66);
+    delay(500);
+    noTone(buzzer);
+}
+
+void successNoise()
+{
+    digitalWrite(LEDB, LOW);
+    digitalWrite(LEDR, LOW);
+    digitalWrite(LEDG, HIGH);
+    tone(buzzer, 293.66);
+    delay(500);
+    tone(buzzer, 440);
+    delay(500);
+    noTone(buzzer); 
+    digitalWrite(LEDG, LOW);
+    digitalWrite(LEDB, HIGH);
+}
+
+void armedNoise()
+{
+    digitalWrite(LEDG, HIGH);
+    tone(buzzer, 440);
+    delay(250);
+    digitalWrite(LEDG, LOW);
+    noTone(buzzer);
+    delay(250);
+    digitalWrite(LEDG, HIGH);
+    tone(buzzer, 440);
+    delay(250);
+    digitalWrite(LEDG, LOW);
+    noTone(buzzer);
+    delay(250);
+    digitalWrite(LEDG, HIGH);
+    tone(buzzer, 440);
+    delay(250);
+    digitalWrite(LEDG, LOW);
+    noTone(buzzer);
+    delay(500);
+    digitalWrite(LEDG, HIGH);
+
+    tone(buzzer, 440);
+    delay(250);
+    noTone(buzzer);
+    delay(250);
+    tone(buzzer, 494);
+    delay(500);
+    tone(buzzer, 659);
+    delay(500);
+    noTone(buzzer);
 }
