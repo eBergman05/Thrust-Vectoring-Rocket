@@ -42,7 +42,7 @@
 //Change this 3 variables if you want to fine tune the skecth to your needs.
 int buffersize=1000;     //Amount of readings used to average, make it higher to get more precision but sketch will be slower  (default:1000)
 int acel_deadzone=8;     //Acelerometer error allowed, make it lower to get more precision, but sketch may not converge  (default:8)
-int giro_deadzone=0.1;     //Giro error allowed, make it lower to get more precision, but sketch may not converge  (default:1)
+int giro_deadzone=0.01;     //Giro error allowed, make it lower to get more precision, but sketch may not converge  (default:1)
 
 // default I2C address is 0x68
 // specific I2C addresses may be passed as a parameter here
@@ -77,7 +77,7 @@ void callibrateMPU(MPU6050 accelgyro)
   }                
   while (Serial.available() && Serial.read()); // empty buffer again
 */
-
+  /*
   // start message
   Serial.println("\nMPU6050 Calibration Sketch");
   delay(2000);
@@ -86,6 +86,7 @@ void callibrateMPU(MPU6050 accelgyro)
   // verify connection
   Serial.println(accelgyro.testConnection() ? "MPU6050 connection successful" : "MPU6050 connection failed");
   delay(1000);
+  */
   // reset offsets
   accelgyro.setXAccelOffset(0);
   accelgyro.setYAccelOffset(0);
@@ -102,7 +103,7 @@ void callibrateMPU(MPU6050 accelgyro)
   {
     if (state==0)
     {
-      Serial.println("\nReading sensors for first time...");
+      //Serial.println("\nReading sensors for first time...");
       meansensors(accelgyro);
       state++;
       delay(1000);
@@ -110,7 +111,7 @@ void callibrateMPU(MPU6050 accelgyro)
 
     if (state==1) 
     {
-      Serial.println("\nCalculating offsets...");
+      //Serial.println("\nCalculating offsets...");
       calibration(accelgyro);
       state++;
       delay(1000);
@@ -118,6 +119,7 @@ void callibrateMPU(MPU6050 accelgyro)
   }
   
   meansensors(accelgyro);
+  /*
   Serial.println("\nFINISHED!");
   Serial.print("\nSensor readings with offsets:\t");
   Serial.print(mean_ax); 
@@ -146,17 +148,21 @@ void callibrateMPU(MPU6050 accelgyro)
   Serial.println("\nData is printed as: acelX acelY acelZ giroX giroY giroZ");
   Serial.println("Check that your sensor readings are close to 0 0 16384 0 0 0");
   Serial.println("If calibration was succesful write down your offsets so you can set them in your projects using something similar to mpu.setXAccelOffset(youroffset)");
+  */
 }
 
 ///////////////////////////////////   FUNCTIONS   ////////////////////////////////////
-void meansensors(MPU6050 accelgyro){
+void meansensors(MPU6050 accelgyro)
+{
   long i=0,buff_ax=0,buff_ay=0,buff_az=0,buff_gx=0,buff_gy=0,buff_gz=0;
 
-  while (i<(buffersize+101)){
+  while (i<(buffersize+101))
+  {
     // read raw accel/gyro measurements from device
     accelgyro.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
     
-    if (i>100 && i<=(buffersize+100)){ //First 100 measures are discarded
+    if (i>100 && i<=(buffersize+100)) //First 100 measures are discarded
+    {
       buff_ax=buff_ax+ax;
       buff_ay=buff_ay+ay;
       buff_az=buff_az+az;
@@ -164,7 +170,8 @@ void meansensors(MPU6050 accelgyro){
       buff_gy=buff_gy+gy;
       buff_gz=buff_gz+gz;
     }
-    if (i==(buffersize+100)){
+    if (i==(buffersize+100))
+    {
       mean_ax=buff_ax/buffersize;
       mean_ay=buff_ay/buffersize;
       mean_az=buff_az/buffersize;
@@ -177,7 +184,8 @@ void meansensors(MPU6050 accelgyro){
   }
 }
 
-void calibration(MPU6050 accelgyro){
+void calibration(MPU6050 accelgyro)
+{
   ax_offset=-mean_ax/8;
   ay_offset=(16384-mean_ay)/8;
   az_offset=-mean_az/8;
@@ -185,7 +193,8 @@ void calibration(MPU6050 accelgyro){
   gx_offset=-mean_gx/4;
   gy_offset=-mean_gy/4;
   gz_offset=-mean_gz/4;
-  while (1){
+  while (1)
+  {
     int ready=0;
     accelgyro.setXAccelOffset(ax_offset);
     accelgyro.setYAccelOffset(ay_offset);
@@ -196,7 +205,7 @@ void calibration(MPU6050 accelgyro){
     accelgyro.setZGyroOffset(gz_offset);
 
     meansensors(accelgyro);
-    Serial.println("...");
+    //Serial.println("...");
 
     if (abs(mean_ax)<=acel_deadzone) ready++;
     else ax_offset=ax_offset-mean_ax/acel_deadzone;

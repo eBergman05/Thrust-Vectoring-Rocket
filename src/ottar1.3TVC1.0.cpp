@@ -89,15 +89,15 @@ void setup() {
 
     Wire.begin();
 
-    Serial.begin(38400);
+    //Serial.begin(38400);
 
     //initialize device
-    Serial.println("Initializing I2C devices...");
+    //Serial.println("Initializing I2C devices...");
     accelgyro.initialize();
 
     //verify connection
-    Serial.println("Testing device connections...");
-    Serial.println(accelgyro.testConnection());
+    //Serial.println("Testing device connections...");
+    //Serial.println(accelgyro.testConnection());
 
     //set resolution level (see MPU6050.ccp for details)
     accelgyro.setFullScaleGyroRange(2); //32.8 LSB/deg/sec
@@ -112,15 +112,15 @@ void setup() {
     servoZ.write(pos);
 
 
-    Serial.print("Initializing SD card...");
+    //Serial.print("Initializing SD card...");
 
     if (!SD.begin(BUILTIN_SDCARD)) 
     {
-        Serial.println("initialization failed!");
+        //Serial.println("initialization failed!");
         blinky.failNoise();
         while(1);
     }
-    Serial.println("initializationdone.");
+    //Serial.println("initializationdone.");
 
     // open the file. note that only one file can be open at a time,
     // so you have to close this one before opening another.
@@ -129,18 +129,20 @@ void setup() {
     // if the file opened okay, write to it:
     if (myFile) 
     {
-        Serial.print("Writing to test.txt...");
+        //Serial.print("Writing to test.txt...");
         myFile.println("Data: angleX, angleZ, pressure, altitued, time");
         // close the file:
         myFile.close();
-        Serial.println("done.");
+        //Serial.println("done.");
+        blinky.successNoise();
     } else {
         // if the file didn't open, print an error:
-        Serial.println("error opening data.txt");
+        //Serial.println("error opening data.txt");
         blinky.failNoise();
     }
 
     // re-open the file for reading:
+    /*
     myFile = SD.open("data.txt");
     if (myFile) 
     {
@@ -159,6 +161,7 @@ void setup() {
         Serial.println("error opening data.txt");
         blinky.failNoise();
     }
+    */
 
     callibrateMPU(accelgyro);
 
@@ -170,6 +173,7 @@ void loop() {
 
     accelgyro.getMotion6(&aX, &aY, &aZ, &gX, &gY, &gZ);
 
+    /*
     #ifdef OUTPUT_READABLE_ACCELgyrO
         // display tab-separated accel/gyro x/y/z values
         Serial.print("a/g:\t");
@@ -189,7 +193,7 @@ void loop() {
         Serial.write((uint8_t)(gY >> 8)); Serial.write((uint8_t)(gY & 0xFF));
         Serial.write((uint8_t)(gZ >> 8)); Serial.write((uint8_t)(gZ & 0xFF));
     #endif
-
+    */
     
     for(int i = 0; i < 99; i++)
     {
@@ -213,8 +217,8 @@ void loop() {
     angleX[99] = angleX[98] + tstep[99]*gX/32800.;
     angleZ[99] = angleZ[98] + tstep[99]*gZ/32800.;
     
-    Serial.println(angleX[99],10);
-    Serial.println(angleZ[99],10);
+    //Serial.println(angleX[99],10);
+    //Serial.println(angleZ[99],10);
 
     count++;
     if (count > 100)
@@ -228,7 +232,7 @@ void loop() {
     data[3] = bmp.readAltitude(1050.35);
     data[4] = millis();
 
-    Serial.println(data[3]);
+    //Serial.println(data[3]);
 
     myFile = SD.open("data.txt", FILE_WRITE);
     for (int n = 0; n < 5; n++)
