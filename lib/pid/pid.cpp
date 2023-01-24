@@ -1,6 +1,6 @@
 #include "pid.h"
 
-void PID(Servo servoX, Servo servoZ, int16_t rotX[], int16_t rotZ[], float angX[], float angZ[], int tstep[])
+void PID(Servo servoX, Servo servoZ, int16_t rotX[], int16_t rotZ[], float angX[], float angZ[], int tstep[], int dataSize)
 {
     int posX;
     int posZ;
@@ -13,13 +13,13 @@ void PID(Servo servoX, Servo servoZ, int16_t rotX[], int16_t rotZ[], float angX[
     float kIZ = -0.00;
     float kDZ = -0.005;
     
-    float propX = angX[9];
+    float propX = angX[dataSize-1];
     float inteX = 0;
-    float deriX = rotX[9];
+    float deriX = rotX[dataSize-1];
     
-    float propZ = angZ[9];
+    float propZ = angZ[dataSize-1];
     float inteZ = 0;
-    float deriZ = rotZ[9];
+    float deriZ = rotZ[dataSize-1];
 
     
     for(int i = 0; i < 100; i++)

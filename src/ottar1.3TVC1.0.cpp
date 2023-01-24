@@ -30,16 +30,18 @@ PrintSerialFlashSst26 printFlash;
 int16_t aX, aY, aZ;
 int16_t gX, gY, gZ;
 
+const int SIZE = 100;
+
 int time0;
 int time1;
-int tstep[100];
+int tstep[SIZE];
 
-int16_t gyroXData[100];
-int16_t gyroYData[100];
-int16_t gyroZData[100];
+int16_t gyroXData[SIZE];
+int16_t gyroYData[SIZE];
+int16_t gyroZData[SIZE];
 
-float angleX[100];
-float angleZ[100];
+float angleX[SIZE];
+float angleZ[SIZE];
 
 float pressure;
 float altitude;
@@ -217,7 +219,7 @@ void loop() {
     count++;
     if (count > 100)
     {
-        PID(servoX, servoZ, gyroXData, gyroZData, angleX, angleZ, tstep);
+        PID(servoX, servoZ, gyroXData, gyroZData, angleX, angleZ, tstep, SIZE);
     }
 
     data[0] = angleX[99];
