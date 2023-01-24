@@ -7,7 +7,7 @@
 #include "MPU6050.h"
 #include "Wire.h"
 
-void callibrateMPU(Servo servoX, Servo servoZ, MPU6050 accelgyro);
+void callibrateMPU(MPU6050 accelgyro);
 void meansensors(MPU6050 accelgyro);
 void calibration(MPU6050 accelgyro);
 

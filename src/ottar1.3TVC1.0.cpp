@@ -16,6 +16,7 @@
 #include "FlashSst26.h"
 #include "PrintSerialFlashSst26.h"
 #include "Adafruit_BMP280.h"
+#include "UI.h"
 
 
 //MPU6050 accelgyro(0x69); // <-- use for AD0 high
@@ -69,6 +70,8 @@ int pos = 90; //starting servo position
 #define LEDG 7
 #define buzzer 37
 
+UI blinky(LEDR, LEDG, LEDB, buzzer);
+
 File myFile;
 
 bool blinkState = false;
@@ -80,7 +83,7 @@ void setup() {
     pinMode(LEDG, OUTPUT);
     pinMode(buzzer, OUTPUT);
     
-    digitalWrite(LEDB, HIGH);
+    blinky.startupNoise();
 
     Wire.begin();
 
@@ -106,15 +109,13 @@ void setup() {
     servoX.write(pos);
     servoZ.write(pos);
 
-    callibrateMPU(servoX, servoZ, accelgyro);
-
-    successNoise();
 
     Serial.print("Initializing SD card...");
 
-    if (!SD.begin(4)) 
+    if (!SD.begin(BUILTIN_SDCARD)) 
     {
         Serial.println("initialization failed!");
+        blinky.failNoise();
         while(1);
     }
     Serial.println("initializationdone.");
@@ -134,7 +135,7 @@ void setup() {
     } else {
         // if the file didn't open, print an error:
         Serial.println("error opening data.txt");
-        failNoise();
+        blinky.failNoise();
     }
 
     // re-open the file for reading:
@@ -150,13 +151,16 @@ void setup() {
         }
         // close the file:
         myFile.close();
-        successNoise();
+        blinky.successNoise();
     } else {
         // if the file didn't open, print an error:
         Serial.println("error opening data.txt");
-        failNoise();
+        blinky.failNoise();
     }
-    armedNoise();
+
+    callibrateMPU(accelgyro);
+
+    blinky.armedNoise();
 }
 
 void loop() {
@@ -236,63 +240,4 @@ void loop() {
     // blink LED to indicate activity
     blinkState = !blinkState;
     digitalWrite(LEDB, blinkState);
-}
-
-void failNoise() 
-{
-    digitalWrite(LEDB, LOW);
-    digitalWrite(LEDG, LOW);
-    digitalWrite(LEDR, HIGH);
-    tone(buzzer, 440);
-    delay(500);
-    tone(buzzer, 293.66);
-    delay(500);
-    noTone(buzzer);
-}
-
-void successNoise()
-{
-    digitalWrite(LEDB, LOW);
-    digitalWrite(LEDR, LOW);
-    digitalWrite(LEDG, HIGH);
-    tone(buzzer, 293.66);
-    delay(500);
-    tone(buzzer, 440);
-    delay(500);
-    noTone(buzzer); 
-    digitalWrite(LEDG, LOW);
-    digitalWrite(LEDB, HIGH);
-}
-
-void armedNoise()
-{
-    digitalWrite(LEDG, HIGH);
-    tone(buzzer, 440);
-    delay(250);
-    digitalWrite(LEDG, LOW);
-    noTone(buzzer);
-    delay(250);
-    digitalWrite(LEDG, HIGH);
-    tone(buzzer, 440);
-    delay(250);
-    digitalWrite(LEDG, LOW);
-    noTone(buzzer);
-    delay(250);
-    digitalWrite(LEDG, HIGH);
-    tone(buzzer, 440);
-    delay(250);
-    digitalWrite(LEDG, LOW);
-    noTone(buzzer);
-    delay(500);
-    digitalWrite(LEDG, HIGH);
-
-    tone(buzzer, 440);
-    delay(250);
-    noTone(buzzer);
-    delay(250);
-    tone(buzzer, 494);
-    delay(500);
-    tone(buzzer, 659);
-    delay(500);
-    noTone(buzzer);
 }

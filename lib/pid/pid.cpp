@@ -6,11 +6,11 @@ void PID(Servo servoX, Servo servoZ, int16_t rotX[], int16_t rotZ[], float angX[
     int posZ;
   
     float kPX = -0.5;
-    float kIX = -0.005;
+    float kIX = -0.00;
     float kDX = -0.005;
     
     float kPZ = -0.5;
-    float kIZ = -0.005;
+    float kIZ = -0.00;
     float kDZ = -0.005;
     
     float propX = angX[9];

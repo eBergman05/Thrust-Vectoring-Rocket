@@ -42,7 +42,7 @@
 //Change this 3 variables if you want to fine tune the skecth to your needs.
 int buffersize=1000;     //Amount of readings used to average, make it higher to get more precision but sketch will be slower  (default:1000)
 int acel_deadzone=8;     //Acelerometer error allowed, make it lower to get more precision, but sketch may not converge  (default:8)
-int giro_deadzone=1;     //Giro error allowed, make it lower to get more precision, but sketch may not converge  (default:1)
+int giro_deadzone=0.1;     //Giro error allowed, make it lower to get more precision, but sketch may not converge  (default:1)
 
 // default I2C address is 0x68
 // specific I2C addresses may be passed as a parameter here
@@ -56,13 +56,8 @@ int16_t ax, ay, az, gx, gy, gz;
 int mean_ax,mean_ay,mean_az,mean_gx,mean_gy,mean_gz,state=0;
 int ax_offset,ay_offset,az_offset,gx_offset,gy_offset,gz_offset;
 
-void callibrateMPU(Servo servoX, Servo servoZ, MPU6050 accelgyro) 
+void callibrateMPU(MPU6050 accelgyro) 
 {
-  servoX.attach(4);
-  servoZ.attach(5);
-  servoX.write(90);
-  servoZ.write(90);
-  
   // join I2C bus (I2Cdev library doesn't do this automatically)
   Wire.begin();
 
@@ -100,7 +95,7 @@ void callibrateMPU(Servo servoX, Servo servoZ, MPU6050 accelgyro)
   accelgyro.setZGyroOffset(0);
 
   accelgyro.setFullScaleGyroRange(2);
-  accelgyro.setDLPFMode(0);
+  accelgyro.setDLPFMode(6);
   
 
   while (state != 2) 
