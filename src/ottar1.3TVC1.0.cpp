@@ -24,17 +24,17 @@ MPU6050 accelgyro;
 
 Adafruit_BMP280 bmp;
 
-FlashSst26 flash;
-PrintSerialFlashSst26 printFlash;
+//FlashSst26 flash;
+//PrintSerialFlashSst26 printFlash;
 
 int16_t aX, aY, aZ;
 int16_t gX, gY, gZ;
 
 const int SIZE = 100;
 
-int time0;
-int time1;
-int tstep[SIZE];
+long time0;
+long time1;
+long tstep[SIZE];
 
 int16_t gyroXData[SIZE];
 int16_t gyroYData[SIZE];
@@ -212,13 +212,8 @@ void loop() {
     gyroXData[99] = gX;
     gyroYData[99] = gY;
     gyroZData[99] = gZ;
-    //angleX[99] = 360*asin(aX/16384.)/(2*M_PI);
-    //angleZ[99] = 360*asin(aZ/16384.)/(2*M_PI);
     angleX[99] = angleX[98] + tstep[99]*gX/32800.;
     angleZ[99] = angleZ[98] + tstep[99]*gZ/32800.;
-    
-    //Serial.println(angleX[99],10);
-    //Serial.println(angleZ[99],10);
 
     count++;
     if (count > 100)

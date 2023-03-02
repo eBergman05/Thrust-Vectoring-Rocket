@@ -4,6 +4,6 @@
 #include <Arduino.h>
 #include <Servo.h>
 
-void PID(Servo servoX, Servo servoZ, int16_t rotX[], int16_t rotZ[], float angX[], float angZ[], int tstep[], int dataSize);
+void PID(Servo servoX, Servo servoZ, int16_t rotX[], int16_t rotZ[], float angX[], float angZ[], long tstep[], int dataSize);
 
 #endif
