@@ -50,6 +50,11 @@ double data[5];
 
 int count = 0;
 
+bool liftoff = false;
+bool apogee = false;
+int16_t yCache;
+int liftoffTime;
+
 // uncomment "OUTPUT_READABLE_ACCELgyrO" if you want to see a tab-separated
 // list of the accel X/Y/Z and then gyro X/Y/Z values in decimal. Easy to read,
 // not so easy to parse, and slow(er) over UART.
@@ -64,6 +69,7 @@ int count = 0;
 //define servos
 Servo servoX;
 Servo servoZ; 
+Servo servoE; //ejection servo
 
 int pos = 90; //starting servo position
 
@@ -107,9 +113,11 @@ void setup() {
     //attach to servos to pins 4 and 5
     servoX.attach(4);
     servoZ.attach(5);
+    servoE.attach(6);
 
     servoX.write(pos);
     servoZ.write(pos);
+    servoE.write(0);
 
 
     //Serial.print("Initializing SD card...");
@@ -164,7 +172,8 @@ void setup() {
     */
 
     callibrateMPU(accelgyro);
-
+    accelgyro.getMotion6(&aX, &aY, &aZ, &gX, &gY, &gZ);
+    yCache = aY;
     blinky.armedNoise();
 }
 
@@ -195,8 +204,16 @@ void loop() {
     #endif
     */
     
-    for(int i = 0; i < 99; i++)
-    {
+    if (!liftoff && (abs(aY - yCache) > 100)){
+        liftoff = true;
+        liftoffTime = millis();
+    }
+    if ((liftoff && (millis()-liftoffTime > 4000)) || (abs(angleX[99]) > 45) || (abs(angleZ[99]) > 45)){
+        servoE.writeMicroseconds(2000);
+        //might be wrong direction
+    }
+
+    for(int i = 0; i < 99; i++){
         gyroXData[i] = gyroXData[i+1];
         gyroYData[i] = gyroYData[i+1];
         gyroZData[i] = gyroZData[i+1];
