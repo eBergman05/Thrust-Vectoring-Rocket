@@ -95,7 +95,7 @@ void UI::successNoise()
     digitalWrite(B, HIGH);
 }
 
-void UI::ignitionNoise() {
+void UI::countDown() {
     digitalWrite(R, LOW);
     digitalWrite(G, LOW);
     for(int i = 0; i < 10; i++) {

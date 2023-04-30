@@ -17,7 +17,7 @@ class UI {
         void failNoise();
         void startupNoise();
         void successNoise();
-        void ignitionNoise();
+        void countDown();
         void completeNoise();
 
 };

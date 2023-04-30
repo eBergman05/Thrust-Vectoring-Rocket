@@ -41,6 +41,7 @@ long tstep;//us
 float tstepS;//s
 
 //data lists
+/*
 std::list<float>uTimeList;
 std::list<float>anglXList;
 std::list<float>anglZList;
@@ -48,6 +49,15 @@ std::list<float>gyroXList;
 std::list<float>gyroZList;
 std::list<float>sPosXList;
 std::list<float>sPosZList;
+*/
+float uTimeList[5000];
+float anglXList[5000];
+float anglZList[5000];
+float gyroXList[5000];
+float gyroZList[5000];
+float sPosXList[5000];
+float sPosZList[5000];
+int count;
 
 //rotational data
 float gyroXData;//deg/s
@@ -210,9 +220,10 @@ void loop() {
     intX = 0;
     intZ = 0;
 
+    count = 0;
 
     //for static fire - time ignition
-    blinky.ignitionNoise();
+    blinky.countDown();
     liftoff = true;
     liftoffTime = millis();
     time1 = micros();
@@ -287,6 +298,7 @@ void loop() {
             //indicate activity
             digitalWrite(LEDB, HIGH);
 
+            /*
             for(std::list<float>::iterator it1=uTimeList.begin(), it2=anglXList.begin(), it3=anglZList.begin(), it4=gyroXList.begin(), it5=gyroZList.begin(), it6 = sPosXList.begin(), it7 = sPosZList.begin();
             (it1!=uTimeList.end());
             ++it1, ++it2, ++it3, ++it4, ++it5, ++it6, ++it7) 
@@ -308,6 +320,26 @@ void loop() {
                 myFile.println();
                 myFile.close();
             }
+            */
+
+           for(count = 0; count < 5000; count ++) {
+                myFile = SD.open("data.txt", FILE_WRITE);
+                myFile.print(uTimeList[count]);
+                myFile.print("\t");
+                myFile.print(anglXList[count]);
+                myFile.print("\t");
+                myFile.print(anglZList[count]);
+                myFile.print("\t");
+                myFile.print(gyroXList[count]);
+                myFile.print("\t");
+                myFile.print(gyroZList[count]);
+                myFile.print("\t");
+                myFile.print(sPosXList[count]);
+                myFile.print("\t");
+                myFile.print(sPosZList[count]);
+                myFile.println();
+                myFile.close();
+           }
             
             digitalWrite(LEDB, LOW);
             //turn off activity light and shut down
@@ -336,14 +368,16 @@ void loop() {
             //feedback loop
             TVC.control(gyroXData, gyroZData, angleX, angleZ, intX, intZ);
             
-            if(i%3 == 0) {
-                uTimeList.push_back(tstep);
-                anglXList.push_back(angleX);
-                anglZList.push_back(angleZ);
-                gyroXList.push_back(gyroXData);
-                gyroZList.push_back(gyroZData);
-                sPosXList.push_back(TVC.getPosX());
-                sPosZList.push_back(TVC.getPosZ());
+            if(i%3 == 0 && count < 5000) {
+                uTimeList[count] = tstep;
+                anglXList[count] = angleX;
+                anglZList[count] = angleZ;
+                gyroXList[count] = gyroXData;
+                gyroZList[count] = gyroZData;
+                sPosXList[count] = TVC.getPosX();
+                sPosZList[count] = TVC.getPosZ();
+
+                count++;
             }
         }
     }
