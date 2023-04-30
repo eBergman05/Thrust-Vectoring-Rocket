@@ -3,8 +3,7 @@
 
 #include <Arduino.h>
 
-class UI
-{
+class UI {
     private:
         int R;
         int G;
@@ -18,6 +17,8 @@ class UI
         void failNoise();
         void startupNoise();
         void successNoise();
+        void ignitionNoise();
+        void completeNoise();
 
 };
 

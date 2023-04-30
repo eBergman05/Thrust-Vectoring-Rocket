@@ -1,20 +1,25 @@
 //@author Ethan Bergman
-//@version 1.0
-//@date 11.23.2022
+//@version 2.0
+//@date 4.20.2023
 //
-//Takes in data from MPU6050 (6 DOF gyro/accel) and uses a PID feedback loop to manipulate TVC mount accordingly
+//Takes in data from MPU6050 (6 DOF gyro/accel) and uses a PID feedback loop 
+//to manipulate TVC mount accordingly
+//
+//Uses PID class to create a controller object and passes in control parameters
+//at around 250Hz
 //
 #include <Arduino.h>
 #include <math.h>
 #include <Servo.h>
 #include <SPI.h>
 #include <SD.h>
+#include <list>
+#include <iostream>
+#include <algorithm>
 #include "I2Cdev.h"
 #include "MPU6050.h"
 #include "pid.h"
 #include "MPU_Callibration.h"
-#include "FlashSst26.h"
-#include "PrintSerialFlashSst26.h"
 #include "Adafruit_BMP280.h"
 #include "UI.h"
 
@@ -22,135 +27,126 @@
 //MPU6050 accelgyro(0x69); // <-- use for AD0 high
 MPU6050 accelgyro;
 
+//barometer&altimeter
 Adafruit_BMP280 bmp;
 
-//FlashSst26 flash;
-//PrintSerialFlashSst26 printFlash;
-
+//gyro data variables
 int16_t aX, aY, aZ;
 int16_t gX, gY, gZ;
 
-const int SIZE = 100;
+//two times used to determine tstep
+long time0;//us
+long time1;//us
+long tstep;//us
+float tstepS;//s
 
-long time0;
-long time1;
-long tstep[SIZE];
+//data lists
+std::list<float>uTimeList;
+std::list<float>anglXList;
+std::list<float>anglZList;
+std::list<float>gyroXList;
+std::list<float>gyroZList;
+std::list<float>sPosXList;
+std::list<float>sPosZList;
 
-int16_t gyroXData[SIZE];
-int16_t gyroYData[SIZE];
-int16_t gyroZData[SIZE];
+//rotational data
+float gyroXData;//deg/s
+float gyroYData;//deg/s
+float gyroZData;//deg/s
 
-float angleX[SIZE];
-float angleZ[SIZE];
+//angular position data
+float angleX;//deg;
+float angleZ;//deg;
+
+//integral of the position-time graph
+float intX;//deg*s
+float intZ;//deg*s
 
 float pressure;
 float altitude;
 
-double data[5];
-
-int count = 0;
-
+//ejection charge triggers
 bool liftoff = false;
 bool apogee = false;
 int16_t yCache;
-int liftoffTime;
-
-// uncomment "OUTPUT_READABLE_ACCELgyrO" if you want to see a tab-separated
-// list of the accel X/Y/Z and then gyro X/Y/Z values in decimal. Easy to read,
-// not so easy to parse, and slow(er) over UART.
-#define OUTPUT_READABLE_ACCELgyrO
-
-// uncomment "OUTPUT_BINARY_ACCELgyrO" to send all 6 axes of data as 16-bit
-// binary, one right after the other. This is very fast (as fast as possible
-// without compression or data loss), and easy to parse, but impossible to read
-// for a human.
-//#define OUTPUT_BINARY_ACCELgyrO
+int liftoffTime;//ms
 
 //define servos
 Servo servoX;
 Servo servoZ; 
-Servo servoE; //ejection servo
 
-int pos = 90; //starting servo position
+//starting servo position, more accurate zeroes in PID class
+int pos = 90; 
 
-#define LEDR 9
-#define LEDB 8
+//define pinout
+#define LEDR 6
 #define LEDG 7
+#define LEDB 8
 #define buzzer 37
+#define solunoid 33
 
+//UI class object
 UI blinky(LEDR, LEDG, LEDB, buzzer);
+
+//PID controller
+PID TVC(servoX, servoZ, 4, 5);
 
 File myFile;
 
-bool blinkState = false;
-
 void setup() {
+    //charge capacitors
+    delay(2500);
 
+    //setup pins
     pinMode(LEDR, OUTPUT);
     pinMode(LEDB, OUTPUT);
     pinMode(LEDG, OUTPUT);
     pinMode(buzzer, OUTPUT);
-    
+    pinMode(solunoid, OUTPUT);
+
     blinky.startupNoise();
 
+    //initialize I2C communication
     Wire.begin();
 
-    //Serial.begin(38400);
-
-    //initialize device
-    //Serial.println("Initializing I2C devices...");
     accelgyro.initialize();
 
-    //verify connection
-    //Serial.println("Testing device connections...");
-    //Serial.println(accelgyro.testConnection());
+    //to verify connection:
+    //accelgyro.testConnection();
 
     //set resolution level (see MPU6050.ccp for details)
     accelgyro.setFullScaleGyroRange(2); //32.8 LSB/deg/sec
     //apply Low Pass Filter (see MPU6050.ccp for details)
     accelgyro.setDLPFMode(6);
 
+/*
     //attach to servos to pins 4 and 5
     servoX.attach(4);
     servoZ.attach(5);
-    servoE.attach(6);
 
     servoX.write(pos);
     servoZ.write(pos);
-    servoE.write(0);
+*/
 
-
-    //Serial.print("Initializing SD card...");
-
+    //test SD card and file existance
     if (!SD.begin(BUILTIN_SDCARD)) 
     {
-        //Serial.println("initialization failed!");
         blinky.failNoise();
         while(1);
     }
-    //Serial.println("initializationdone.");
-
-    // open the file. note that only one file can be open at a time,
-    // so you have to close this one before opening another.
     myFile = SD.open("data.txt", FILE_WRITE);
-
     // if the file opened okay, write to it:
     if (myFile) 
     {
-        //Serial.print("Writing to test.txt...");
-        myFile.println("Data: angleX, angleZ, pressure, altitued, time");
-        // close the file:
+        myFile.println("Data: time, angleX, angleZ, gX, gZ, iX, iZ, posX, posZ");
         myFile.close();
-        //Serial.println("done.");
         blinky.successNoise();
     } else {
-        // if the file didn't open, print an error:
-        //Serial.println("error opening data.txt");
         blinky.failNoise();
     }
 
+/*
     // re-open the file for reading:
-    /*
     myFile = SD.open("data.txt");
     if (myFile) 
     {
@@ -164,98 +160,191 @@ void setup() {
         // close the file:
         myFile.close();
         blinky.successNoise();
+
+
     } else {
         // if the file didn't open, print an error:
         Serial.println("error opening data.txt");
         blinky.failNoise();
     }
-    */
+*/ 
 
     callibrateMPU(accelgyro);
     accelgyro.getMotion6(&aX, &aY, &aZ, &gX, &gY, &gZ);
-    yCache = aY;
+    yCache = aY; //to check takeoff
+
+    gyroXData = 0;
+    gyroZData = 0;
+    angleX = 0;
+    angleZ = 0;
+    intX = 0;
+    intZ = 0;
+
+    TVC.control(gyroXData, gyroZData, angleX, angleZ, intX, intZ);
+
     blinky.armedNoise();
 }
 
 void loop() {
-// read raw accel/gyro measurements from device
+    //throw away first 100 measurements - off for some reason
+    for(int n = 0; n < 100; n++) {
 
-    accelgyro.getMotion6(&aX, &aY, &aZ, &gX, &gY, &gZ);
+        accelgyro.getMotion6(&aX, &aY, &aZ, &gX, &gY, &gZ);  
 
-    /*
-    #ifdef OUTPUT_READABLE_ACCELgyrO
-        // display tab-separated accel/gyro x/y/z values
-        Serial.print("a/g:\t");
-        Serial.print(aX); Serial.print("\t");
-        Serial.print(aY); Serial.print("\t");
-        Serial.print(aZ); Serial.print("\t");
-        Serial.print(gX); Serial.print("\t");
-        Serial.print(gY); Serial.print("\t");
-        Serial.println(gZ);
-    #endif
+        time0 = time1;
+        time1 = micros();
+        tstep = time1 - time0;
+        tstepS = tstep/1000000.;
 
-    #ifdef OUTPUT_BINARY_ACCELgyrO
-        Serial.write((uint8_t)(aX >> 8)); Serial.write((uint8_t)(aX & 0xFF));
-        Serial.write((uint8_t)(aY >> 8)); Serial.write((uint8_t)(aY & 0xFF));
-        Serial.write((uint8_t)(aZ >> 8)); Serial.write((uint8_t)(aZ & 0xFF));
-        Serial.write((uint8_t)(gX >> 8)); Serial.write((uint8_t)(gX & 0xFF));
-        Serial.write((uint8_t)(gY >> 8)); Serial.write((uint8_t)(gY & 0xFF));
-        Serial.write((uint8_t)(gZ >> 8)); Serial.write((uint8_t)(gZ & 0xFF));
-    #endif
-    */
-    
-    if (!liftoff && (abs(aY - yCache) > 100)){
-        liftoff = true;
-        liftoffTime = millis();
-    }
-    if ((liftoff && (millis()-liftoffTime > 4000)) || (abs(angleX[99]) > 45) || (abs(angleZ[99]) > 45)){
-        servoE.writeMicroseconds(2000);
-        //might be wrong direction
+        gyroXData = gX/32.800;
+        gyroZData = gZ/32.800;
+        angleX += tstepS*gyroXData;
+        angleZ += tstepS*gyroZData;
+        intX += angleX*tstepS;
+        intZ += angleZ*tstepS;
     }
 
-    for(int i = 0; i < 99; i++){
-        gyroXData[i] = gyroXData[i+1];
-        gyroYData[i] = gyroYData[i+1];
-        gyroZData[i] = gyroZData[i+1];
-        angleX[i] = angleX[i+1];
-        angleZ[i] = angleZ[i+1];
-        tstep[i] = tstep[i+1];
-    }
+    //set cumulatives back to zero
+    angleX = 0;
+    angleZ = 0;
+    intX = 0;
+    intZ = 0;
 
-    time0 = time1;
-    time1 = millis();
-    tstep[99] = time1 - time0;
-    
-    gyroXData[99] = gX;
-    gyroYData[99] = gY;
-    gyroZData[99] = gZ;
-    angleX[99] = angleX[98] + tstep[99]*gX/32800.;
-    angleZ[99] = angleZ[98] + tstep[99]*gZ/32800.;
 
-    count++;
-    if (count > 100)
-    {
-        PID(servoX, servoZ, gyroXData, gyroZData, angleX, angleZ, tstep, SIZE);
-    }
-
-    data[0] = angleX[99];
-    data[1] = angleZ[99];
-    data[2] = bmp.readPressure();
-    data[3] = bmp.readAltitude(1050.35);
-    data[4] = millis();
-
-    //Serial.println(data[3]);
+    //for static fire - time ignition
+    blinky.ignitionNoise();
+    liftoff = true;
+    liftoffTime = millis();
+    time1 = micros();
 
     myFile = SD.open("data.txt", FILE_WRITE);
-    for (int n = 0; n < 5; n++)
-    {
-        myFile.print(data[n]);
-        myFile.print("\t");
-    }
-    myFile.println();
+    myFile.println("<<IGNITION>>");
     myFile.close();
-        
-    // blink LED to indicate activity
-    blinkState = !blinkState;
-    digitalWrite(LEDB, blinkState);
+
+    //feedback loop one: don't starting adding integral until liftoff
+    while (!liftoff) {
+        accelgyro.getMotion6(&aX, &aY, &aZ, &gX, &gY, &gZ);        
+            
+            //record time in us, convert tstep to s
+            time0 = time1;
+            time1 = micros();
+            tstep = time1 - time0;
+            tstepS = tstep/1000000.;
+            
+            //pass in data, convert to deg/s, deg, and deg*s
+            gyroXData = gX/32.800;
+            gyroZData = gZ/32.800;
+            angleX += tstepS*gyroXData;
+            angleZ += tstepS*gyroZData;
+
+            //feedback loop
+            TVC.control(gyroXData, gyroZData, angleX, angleZ, intX, intZ);
+
+            if ((abs(aY - yCache) > 1000)){
+                liftoff = true;
+                liftoffTime = millis();
+            }
+
+            //write data to SD card
+            myFile = SD.open("data.txt", FILE_WRITE);
+            myFile.print(time1);
+            myFile.print("\t");
+            myFile.print(tstep);
+            myFile.print("\t");
+            myFile.print(angleX);
+            myFile.print("\t");
+            myFile.print(angleZ);
+            myFile.print("\t");
+            myFile.print(gyroXData);
+            myFile.print("\t");
+            myFile.print(gyroZData);
+            myFile.print("\t");
+            myFile.print(intX);
+            myFile.print("\t");
+            myFile.print(intZ);
+            myFile.print("\t");
+            myFile.print(TVC.getPosX());
+            myFile.print("\t");
+            myFile.print(TVC.getPosZ());
+            myFile.println();
+            if (liftoff) myFile.println("<<LIFTOFF>>");
+            myFile.close();
+    }
+
+    //feedback loop
+    while(1) {
+
+        //check if the rocket has reached apogee or turned too far.
+        //commented out for static tests with no ejection charge
+        if ((millis()-liftoffTime > 10000) || (abs(angleX) > 45) || (abs(angleZ) > 45)) {
+
+            //open valve for 0.5s
+            delay(100);
+            digitalWrite(solunoid, HIGH);
+            delay(500);
+            digitalWrite(solunoid, LOW);
+
+            //indicate activity
+            digitalWrite(LEDB, HIGH);
+
+            for(std::list<float>::iterator it1=uTimeList.begin(), it2=anglXList.begin(), it3=anglZList.begin(), it4=gyroXList.begin(), it5=gyroZList.begin(), it6 = sPosXList.begin(), it7 = sPosZList.begin();
+            (it1!=uTimeList.end());
+            ++it1, ++it2, ++it3, ++it4, ++it5, ++it6, ++it7) 
+            {
+                myFile = SD.open("data.txt", FILE_WRITE);
+                myFile.print(*it1);
+                myFile.print("\t");
+                myFile.print(*it2);
+                myFile.print("\t");
+                myFile.print(*it3);
+                myFile.print("\t");
+                myFile.print(*it4);
+                myFile.print("\t");
+                myFile.print(*it5);
+                myFile.print("\t");
+                myFile.print(*it6);
+                myFile.print("\t");
+                myFile.print(*it7);
+                myFile.println();
+                myFile.close();
+            }
+            
+            digitalWrite(LEDB, LOW);
+            //turn off activity light and shut down
+            blinky.completeNoise();
+        }
+
+        //reduce the amount of times the checks are called
+        for (int i = 0; i < 10; i++) {
+            //read motion data
+            accelgyro.getMotion6(&aX, &aY, &aZ, &gX, &gY, &gZ);   
+
+            //record time in us, convert tstep to s
+            time0 = time1;
+            time1 = micros();
+            tstep = time1 - time0;
+            tstepS = tstep/1000000.;
+
+            //pass in data, convert to deg/s, deg, and deg*s
+            gyroXData = gX/32.800;
+            gyroZData = gZ/32.800;
+            angleX += tstepS*gyroXData;
+            angleZ += tstepS*gyroZData;
+            intX += angleX*tstepS;
+            intZ += angleZ*tstepS;
+
+            //feedback loop
+            TVC.control(gyroXData, gyroZData, angleX, angleZ, intX, intZ);
+            
+            if(i%3 == 0) {
+                uTimeList.push_back(tstep);
+                anglXList.push_back(angleX);
+                anglZList.push_back(angleZ);
+                gyroXList.push_back(gyroXData);
+                gyroZList.push_back(gyroZData);
+                sPosXList.push_back(TVC.getPosX());
+                sPosZList.push_back(TVC.getPosZ());
+            }
+        }
+    }
 }

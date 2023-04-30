@@ -1,64 +1,77 @@
+//  Simulation values (rad -> rad)
+//  kP = -0.33; 
+//  kI = -0.2;
+//  kD = -0.1;
+//
+//  Real values (deg -> us)
+//  deg * 17.86 = us
+//  kP = -5.89
+//  kI = -3.57
+//  kD = -1.79
+//  all inputs are in degrees, deg/s, or deg*s
 #include "pid.h"
 
-void PID(Servo servoX, Servo servoZ, int16_t rotX[], int16_t rotZ[], float angX[], float angZ[], long tstep[], int dataSize)
+
+//object definition
+PID::PID(Servo sX, Servo sZ, int pX, int pZ)
+    :servoX(sX), 
+    servoZ(sZ), 
+    pinX(pX),
+    pinZ(pZ),
+    rotX(), 
+    rotZ(), 
+    angX(), 
+    angZ(), 
+    intX(), 
+    intZ(), 
+    tstep(), 
+    posX(), 
+    posZ(), 
+    range(125), 
+    mag(), 
+    kPX(-5.89), 
+    kIX(-3.57),
+    kDX(-1.79), 
+    kPZ(-5.89), 
+    kIZ(-3.57),
+    kDZ(-1.79) 
 {
-    int posX;
-    int posZ;
-    double mag;
-  
-    float kPX = -5;
-    float kIX = -0.00;
-    float kDX = -0.01;
-    
-    float kPZ = -5;
-    float kIZ = -0.00;
-    float kDZ = -0.01;
-    
-    float propX = angX[dataSize-1];
-    float inteX = 0;
-    float deriX = rotX[dataSize-1];
-    
-    float propZ = angZ[dataSize-1];
-    float inteZ = 0;
-    float deriZ = rotZ[dataSize-1];
+    servoX.attach(pinX);
+    servoZ.attach(pinZ);
 
+    servoX.writeMicroseconds(1520);
+    servoZ.writeMicroseconds(1425);
+}
+
+float PID::getPosX() {
+    return posX/25.;
+}
+
+float PID::getPosZ() {
+    return posZ/25.;
+}
+
+void PID::control(float rX, float rZ, float aX, float aZ, float iX, float iZ) {
+    rotX = rX;
+    rotZ = rZ;
+    angX = aX;
+    angZ = aZ;
+    intX = iX;
+    intZ = iZ;
     
-    for(int i = 0; i < 100; i++)
-    {
-        inteX += angX[i]*tstep[i];
-        inteZ += angZ[i]*tstep[i];
-    }
-    
-    //averaging filters for P and D
-    /*
-    for(int i = 98; i > 95; i--)
-    {
-        propX += angX[i];
-        propZ += angZ[i];
-    }
-    propX/=4;
-    propZ/=4;
+    posX = (kPX*angX + kIX*intX + kDX*rotX);
+    posZ = (kPZ*angZ + kIZ*intZ + kDZ*rotZ);
+    mag = pow(posX*posX + posZ*posZ, 0.5);
 
-    for(int i = 98; i > 95; i--)
-    {
-        deriX += rotX[i];
-        deriZ += rotZ[i];
-    }
-    deriX/=4;
-    deriZ/=4;
-    */
-
-    posX = 5*(kPX*propX + kIX*inteX + kDX*deriX);
-    posZ = 5*(kPZ*propZ + kIZ*inteZ + kDZ*deriZ);
-    mag = pow(posX*posX + posZ*posZ,0.5);
-
-    if (mag > 160) {
-        posX = int(posX*160/mag);
-        posZ = int(posZ*160/mag);
+    if (mag > range) {
+        posX = int(posX*range/mag);
+        posZ = int(posZ*range/mag);
     }
 
     //writeMicroseconds is more precise: 0 deg -> 1000 us, 180 deg -> 2000 us
 
-    servoX.writeMicroseconds(1500-posX);
-    servoZ.writeMicroseconds(1500-posZ);
+
+
+    servoX.writeMicroseconds(1520+posX);
+    servoZ.writeMicroseconds(1425+posZ);
 }
