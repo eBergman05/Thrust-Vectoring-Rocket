@@ -11,13 +11,16 @@ class PID {
         int pinZ;
         float rotX; // deg/s
         float rotZ; // deg/s
-        float angX;   // deg
-        float angZ;   // deg
-        float intX;   // deg*s
-        float intZ;   // deg*s
-        long tstep;   // s
-        int posX;
-        int posZ;
+        float angX; // deg
+        float angY; //radians
+        float angZ; // deg
+        float intX; // deg*s
+        float intZ; // deg*s
+        long tstep; // s
+        int posX; //us - real X servo position
+        int posZ; //us - real Z servo position
+        int tPosX; //us - "true" X servo position
+        int tPosZ; //us - "true" Z servo position
         int range;
         double mag;
         float kPX;
@@ -29,8 +32,10 @@ class PID {
 
     public:
         PID(Servo sX, Servo sZ, int pX, int pZ);
+        float getTPosX();
+        float getTPosZ();
         float getPosX();
         float getPosZ();
-        void control(float rX, float rZ, float aX, float aZ, float iX, float iZ);
+        void control(float aY, float rX, float rZ, float aX, float aZ, float iX, float iZ);
 };
 #endif

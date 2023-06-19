@@ -21,6 +21,7 @@ PID::PID(Servo sX, Servo sZ, int pX, int pZ)
     rotX(), 
     rotZ(), 
     angX(), 
+    angY(),
     angZ(), 
     intX(), 
     intZ(), 
@@ -43,35 +44,43 @@ PID::PID(Servo sX, Servo sZ, int pX, int pZ)
     servoZ.writeMicroseconds(1425);
 }
 
+float PID::getTPosX() {
+    return tPosX/17.86;
+}
+
+float PID::getTPosZ() {
+    return tPosZ/17.86;
+}
+
 float PID::getPosX() {
-    return posX/25.;
+    return posX/17.86;
 }
 
 float PID::getPosZ() {
-    return posZ/25.;
+    return posZ/17.86;
 }
 
-void PID::control(float rX, float rZ, float aX, float aZ, float iX, float iZ) {
+void PID::control(float aY, float rX, float rZ, float aX, float aZ, float iX, float iZ) {
     rotX = rX;
     rotZ = rZ;
     angX = aX;
+    angY = aY;
     angZ = aZ;
     intX = iX;
     intZ = iZ;
     
-    posX = (kPX*angX + kIX*intX + kDX*rotX);
-    posZ = (kPZ*angZ + kIZ*intZ + kDZ*rotZ);
-    mag = pow(posX*posX + posZ*posZ, 0.5);
+    tPosX = (kPX*angX + kIX*intX + kDX*rotX);
+    tPosZ = (kPZ*angZ + kIZ*intZ + kDZ*rotZ);
+    mag = pow(tPosX*tPosX + tPosZ*tPosZ, 0.5);
 
     if (mag > range) {
-        posX = int(posX*range/mag);
-        posZ = int(posZ*range/mag);
+        tPosX = int(tPosX*range/mag);
+        tPosZ = int(tPosZ*range/mag);
     }
 
-    //writeMicroseconds is more precise: 0 deg -> 1000 us, 180 deg -> 2000 us
+    posX = (tPosX * cos(angY)) + (tPosZ * sin(angY));
+    posZ = (tPosZ * cos(angY)) - (tPosX * sin(angY));
 
-
-
-    servoX.writeMicroseconds(1520+posX);
-    servoZ.writeMicroseconds(1425+posZ);
+    servoX.writeMicroseconds(1500+posX);
+    servoZ.writeMicroseconds(1375+posZ);
 }
