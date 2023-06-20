@@ -56,9 +56,9 @@ float gyroYData;//radians/s - Y rotation
 float gyroZData;//deg/s - relative Z rotation
 
 //"true" angular position and velocity data
-float angleX;//deg - true Z angle
+float angleX;//deg - true X angle
 float angleY;//radians - Y angle
-float angleZ;//deg - true X angle
+float angleZ;//deg - true Z angle
 float rotatX;//deg/s - true X rotation
 float rotatZ;//deg/s - true Z rotation
 
@@ -195,13 +195,18 @@ void setup() {
     delay(500);
     blinky.armedNoise();
     delay(500);
+
+    //100 second countdown -- start apple timer for 1:40 between the first two beeps
+    //ignition begins at T-00:01.50
+    //last long beep is  T-00:01.00 to T-00:00.00
+    //liftoff occurs at  T-00:00.00
+    //ejection occurs at T+00:05.00 or if an abort is called from the OTTAr or mission control
     blinky.countDown();
     delay(70000);
     blinky.countDown();
-}
 
-void loop() {
     //throw away first 100 measurements - off for some reason
+    //rocket inactive for first 155ms
     for(int n = 0; n < 100; n++) {
 
         accelgyro.getMotion6(&aX, &aY, &aZ, &gX, &gY, &gZ);  
@@ -212,7 +217,7 @@ void loop() {
         tstepS = tstep/1000000.;
 
         gyroXData = gX/32.800;
-        gyroYData = gY/32.800 * 0.0174533; //convert degrees to radians
+        gyroYData = (gY/32.800) * 0.0174533; //convert degrees to radians
         gyroZData = gZ/32.800;
         angleY -= gyroYData*tstepS;
         rotatX = (gyroXData * cos(angleY)) + (gyroZData * sin(angleY));
@@ -231,78 +236,7 @@ void loop() {
     intZ = 0;
 
     count = 0;
-
-    //for static fire - time ignition
-    /*
-    liftoff = true;
     liftoffTime = millis();
-    time1 = micros();
-
-    myFile = SD.open("data.txt", FILE_WRITE);
-    myFile.println("<<IGNITION>>");
-    myFile.close();
-    */
-
-    //feedback loop one: don't starting adding integral until liftoff
-    while (!liftoff) {
-        for (int i = 0; i < 10; i++) {
-            //read motion data
-            accelgyro.getMotion6(&aX, &aY, &aZ, &gX, &gY, &gZ);   
-
-            //record time in us, convert tstep to s
-            time0 = time1;
-            time1 = micros();
-            tstep = time1 - time0;
-            tstepS = tstep/1000000.;
-
-            //pass in data, convert to deg/s, deg, and deg*s
-            gyroXData = gX/32.800;
-            gyroYData = (gY/32.800) * 0.0174533; //convert degrees to radians
-            gyroZData = gZ/32.800;
-            angleY -= gyroYData*tstepS;
-            rotatX = (gyroXData * cos(angleY)) - (gyroZData * sin(angleY));
-            rotatZ = (gyroZData * cos(angleY)) + (gyroXData * sin(angleY));
-            angleX += tstepS*rotatX;
-            angleZ += tstepS*rotatZ;
-            //no integral until liftoff
-
-            //feedback loop
-            TVC.control(angleY, rotatX, rotatZ, angleX, angleZ, intX, intZ);
-
-            //liftoff check
-            /*
-            if ((abs(aY - yCache) > 1000)){
-                liftoff = true;
-                liftoffTime = millis();
-            }
-            */
-
-            if(i%2 == 0 && count < 5000) {
-                uTimeList[count] = tstep;
-                anglXList[count] = angleX;
-                anglZList[count] = angleZ;
-                gyroXList[count] = gyroYData/0.0174533;
-                gyroZList[count] = angleY/0.0174533;
-                sPosXList[count] = TVC.getPosX();
-                sPosZList[count] = TVC.getPosZ();
-
-                count++;
-
-                if(liftoff) {
-                        
-                    uTimeList[count] = 0;
-                    anglXList[count] = 0;
-                    anglZList[count] = 0;
-                    gyroXList[count] = 0;
-                    gyroZList[count] = 0;
-                    sPosXList[count] = 0;
-                    sPosZList[count] = 0;
-
-                    count++;
-                }
-            }
-        }
-    }
 
     //feedback loop
     while(1) {
@@ -332,6 +266,7 @@ void loop() {
             //feedback loop
             TVC.control(angleY, rotatX, rotatZ, angleX, angleZ, intX, intZ);
             
+            //record every other data point set
             if(i%2 == 0 && count < 5000) {
                 uTimeList[count] = tstep;
                 anglXList[count] = angleX;
@@ -347,7 +282,7 @@ void loop() {
 
         //check if the rocket has reached apogee or turned too far.
         //commented out for static tests with no ejection charge
-        //5s to apogee--10s for hold down test
+        //5s to apogee
         if ((millis()-liftoffTime > 5000) || (abs(angleX) > 45) || (abs(angleZ) > 45)) {
 
             //open valve for 0.5s
@@ -379,8 +314,9 @@ void loop() {
             }
             
             digitalWrite(LEDB, LOW);
-            //turn off activity light and shut down
+            //turn off activity light and begin ping
             blinky.completeNoise();
         }
     }
 }
+void loop(){}
