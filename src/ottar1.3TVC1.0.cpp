@@ -41,14 +41,14 @@ long tstep;//us
 float tstepS;//s
 
 //data lists
-float uTimeList[5000];
-float anglXList[5000];
-float anglZList[5000];
-float gyroXList[5000];
-float gyroZList[5000];
-float sPosXList[5000];
-float sPosZList[5000];
-float altitList[5000];
+EXTMEM float uTimeList[5000];
+EXTMEM float anglXList[5000];
+EXTMEM float anglZList[5000];
+EXTMEM float gyroXList[5000];
+EXTMEM float gyroZList[5000];
+EXTMEM float sPosXList[5000];
+EXTMEM float sPosZList[5000];
+EXTMEM float altitList[5000];
 int count;
 
 //raw accelgyro data
