@@ -48,9 +48,10 @@ float gyroXList[5000];
 float gyroZList[5000];
 float sPosXList[5000];
 float sPosZList[5000];
+float altitList[5000];
 int count;
 
-//raw rotational data
+//raw accelgyro data
 float gyroXData;//deg/s - relative X rotation
 float gyroYData;//radians/s - Y rotation
 float gyroZData;//deg/s - relative Z rotation
@@ -66,13 +67,10 @@ float rotatZ;//deg/s - true Z rotation
 float intX;//deg*s - integral of X angle
 float intZ;//deg*s - integral of Z angle
 
-float pressure;
-float altitude;
+float pressure;//barometer currently not working
+float altitude;//barometer currently not working
 
-//ejection charge triggers
-bool liftoff = false;
-bool apogee = false;
-int16_t yCache;
+//ejection charge trigger
 int liftoffTime;//ms
 
 //define servos
@@ -116,44 +114,33 @@ void setup() {
     accelgyro.initialize();
 
     //to verify connection:
-    //accelgyro.testConnection();
+    if (!accelgyro.testConnection()){
+        blinky.failNoise();
+        while(1);
+    }
 
     //set resolution level (see MPU6050.ccp for details)
     accelgyro.setFullScaleGyroRange(2); //32.8 LSB/deg/sec
     //apply Low Pass Filter (see MPU6050.ccp for details)
     accelgyro.setDLPFMode(6);
 
-/*
-    //attach to servos to pins 4 and 5
-    servoX.attach(4);
-    servoZ.attach(5);
-
-    servoX.write(pos);
-    servoZ.write(pos);
-*/
-
     //test SD card and file existance
-    
-    if (!SD.begin(BUILTIN_SDCARD)) 
-    {
+    if (!SD.begin(BUILTIN_SDCARD)) {
         blinky.failNoise();
         while(1);
     }
     myFile = SD.open("data.txt", FILE_WRITE);
     // if the file opened okay, write to it:
-    if (myFile) 
-    {
+    if (myFile) {
         myFile.println("Data: time, angleX, angleZ, gX, gZ, iX, iZ, posX, posZ");
         myFile.close();
-        blinky.successNoise();
     } else {
         blinky.failNoise();
     }
 
     // re-open the file for reading:
     myFile = SD.open("data.txt");
-    if (myFile) 
-    {
+    if (myFile) {
         Serial.println("data.txt:");
 
         // read from the file until there's nothing else in it:
@@ -164,14 +151,11 @@ void setup() {
         // close the file:
         myFile.close();
         blinky.successNoise();
-
-
     } else {
         // if the file didn't open, print an error:
         Serial.println("error opening data.txt");
         blinky.failNoise();
     }
-
 
     //callibrateMPU(accelgyro);
     accelgyro.setXGyroOffset(156);
@@ -179,7 +163,6 @@ void setup() {
     accelgyro.setZGyroOffset(-7);
 
     accelgyro.getMotion6(&aX, &aY, &aZ, &gX, &gY, &gZ);
-    yCache = aY; //to check takeoff
 
     gyroXData = 0;
     gyroYData = 0;
