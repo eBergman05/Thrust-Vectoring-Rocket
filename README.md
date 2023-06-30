@@ -10,9 +10,9 @@ and I am working out of PlatformIO in vscode.
 # Contents
 
 1. Main .cpp code containing a program to control 
-a two-servo thrust vector mount
+a two-servo thrust vector mount in "src"
 2. Several subclasses for larger functions, as well 
-as to utilize OOP
+as to utilize OOP in "lib"
     - The "pid" subclass contains the control loop: 
     a Proportional, Integral, Differential feedback
     loop provides a predictive and memory-based
