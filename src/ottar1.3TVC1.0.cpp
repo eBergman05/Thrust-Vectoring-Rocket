@@ -50,6 +50,7 @@ EXTMEM float sPosXList[5000];
 EXTMEM float sPosZList[5000];
 EXTMEM float altitList[5000];
 int count;
+int maxCount;
 
 //raw accelgyro data
 float gyroXData;//deg/s - relative X rotation
@@ -99,6 +100,7 @@ void setup() {
     //charge capacitors
     delay(500);
 
+            
     //setup pins
     pinMode(LEDR, OUTPUT);
     pinMode(LEDB, OUTPUT);
@@ -157,10 +159,15 @@ void setup() {
         blinky.failNoise();
     }
 
-    //callibrateMPU(accelgyro);
-    accelgyro.setXGyroOffset(156);
-    accelgyro.setYGyroOffset(28);
-    accelgyro.setZGyroOffset(-7);
+    callibrateMPU(accelgyro);
+    /*  
+    accelgyro.setXAccelOffset(-1915);
+    accelgyro.setYAccelOffset(2399);
+    accelgyro.setZAccelOffset(1240);
+    accelgyro.setXGyroOffset(-90);
+    accelgyro.setYGyroOffset(43);
+    accelgyro.setZGyroOffset(27);
+    */
 
     accelgyro.getMotion6(&aX, &aY, &aZ, &gX, &gY, &gZ);
 
@@ -220,6 +227,7 @@ void setup() {
 
     count = 0;
     liftoffTime = millis();
+    time1 = micros();
 
     //feedback loop
     while(1) {
@@ -266,7 +274,7 @@ void setup() {
         //check if the rocket has reached apogee or turned too far.
         //commented out for static tests with no ejection charge
         //5s to apogee
-        if ((millis()-liftoffTime > 5000) || (abs(angleX) > 45) || (abs(angleZ) > 45)) {
+        if ((millis()-liftoffTime > 7000) || (abs(angleX) > 45) || (abs(angleZ) > 45)) {
 
             //open valve for 0.5s
             delay(100);
@@ -277,7 +285,8 @@ void setup() {
             //indicate activity
             digitalWrite(LEDB, HIGH);
 
-            for(count = 0; count < 5000; count ++) {
+            maxCount = count;
+            for(count = 0; count < maxCount; count ++) {
                 myFile = SD.open("data.txt", FILE_WRITE);
                 myFile.print(uTimeList[count]);
                 myFile.print("\t");
@@ -296,6 +305,10 @@ void setup() {
                 myFile.close();
             }
             
+            myFile = SD.open("data.txt", FILE_WRITE);
+            myFile.println(maxCount);
+            myFile.close();
+
             digitalWrite(LEDB, LOW);
             //turn off activity light and begin ping
             blinky.completeNoise();

@@ -3,6 +3,9 @@
 //  kI = -0.2;
 //  kD = -0.1;
 //
+//  Using an F22J
+//  For hold down test using an F15 multiply all values by 1.34
+//
 //  Real values (deg -> us)
 //  deg * 17.86 = us
 //  kP = -5.89
@@ -40,8 +43,8 @@ PID::PID(Servo sX, Servo sZ, int pX, int pZ)
     servoX.attach(pinX);
     servoZ.attach(pinZ);
 
-    servoX.writeMicroseconds(1520);
-    servoZ.writeMicroseconds(1425);
+    servoX.writeMicroseconds(1500);
+    servoZ.writeMicroseconds(1375);
 }
 
 float PID::getTPosX() {

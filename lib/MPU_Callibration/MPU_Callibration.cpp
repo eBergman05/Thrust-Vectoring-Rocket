@@ -64,8 +64,8 @@ void callibrateMPU(MPU6050 accelgyro)
   // initialize serial communication
   Serial.begin(115200);
 
-  // initialize device
-  accelgyro.initialize();
+  // initialize device - done in parent function
+  //accelgyro.initialize();
 
   // wait for ready
 /*
@@ -94,9 +94,6 @@ void callibrateMPU(MPU6050 accelgyro)
   accelgyro.setXGyroOffset(0);
   accelgyro.setYGyroOffset(0);
   accelgyro.setZGyroOffset(0);
-
-  accelgyro.setFullScaleGyroRange(2);
-  accelgyro.setDLPFMode(6);
   
 
   while (state != 2) 
