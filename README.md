@@ -1,4 +1,4 @@
-#Thrust-Vectoring Rocket
+# Thrust-Vectoring Rocket
 
 This repository contains software for controlling a 
 thrust-vectoring model rocket.
@@ -7,7 +7,7 @@ I am using a Teensy 4.1 on a custom PCB christened
 the OTTAr1.3(On-board Telemetry and TVC Avionics),
 and I am working out of PlatformIO in vscode.
 
-#Contents
+# Contents
 
 1. Main .cpp code containing a program to control 
 a two-servo thrust vector mount
@@ -20,7 +20,7 @@ as to utilize OOP
 3. All libraries and config files required to run 
 out of PIO instead of arduino framework
 
-#Installation
+# Installation
 
 Install PIO in vscode, then open repo through "open
 project" in PIO
