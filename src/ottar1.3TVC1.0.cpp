@@ -8,6 +8,11 @@
 //Uses PID class to create a controller object and passes in control parameters
 //at around 600Hz
 //
+//The rocket can spin along its y-axis, so all X and Z measurements are converted 
+//to "true" measurements, which are referenced to the original position of the rocket
+//these measurements are used to find the PID values and then converted back to the
+//rocket's relative axes.
+//
 #include <Arduino.h>
 #include <math.h>
 #include <Servo.h>
@@ -28,48 +33,48 @@
 MPU6050 accelgyro;
 
 //barometer&altimeter
-Adafruit_BMP280 bmp;
+//Adafruit_BMP280 bmp;
 
 //gyro data variables
 int16_t aX, aY, aZ;
 int16_t gX, gY, gZ;
 
 //two times used to determine tstep
-long time0;//us
-long time1;//us
-long tstep;//us
-float tstepS;//s
+u_long time0;//us
+u_long time1;//us
+u_long tstep;//us
+double tstepS;//s
 
 //data lists
-EXTMEM float uTimeList[5000];
-EXTMEM float anglXList[5000];
-EXTMEM float anglZList[5000];
-EXTMEM float gyroXList[5000];
-EXTMEM float gyroZList[5000];
-EXTMEM float sPosXList[5000];
-EXTMEM float sPosZList[5000];
-EXTMEM float altitList[5000];
+EXTMEM double uTimeList[3000];
+EXTMEM double anglXList[3000];
+EXTMEM double anglZList[3000];
+EXTMEM double gyroXList[3000];
+EXTMEM double gyroZList[3000];
+EXTMEM double sPosXList[3000];
+EXTMEM double sPosZList[3000];
+//EXTMEM double altitList[3000];
 int count;
 int maxCount;
 
 //raw accelgyro data
-float gyroXData;//deg/s - relative X rotation
-float gyroYData;//radians/s - Y rotation
-float gyroZData;//deg/s - relative Z rotation
+double gyroXData;//deg/s - relative X rotation
+double gyroYData;//radians/s - Y rotation
+double gyroZData;//deg/s - relative Z rotation
 
 //"true" angular position and velocity data
-float angleX;//deg - true X angle
-float angleY;//radians - Y angle
-float angleZ;//deg - true Z angle
-float rotatX;//deg/s - true X rotation
-float rotatZ;//deg/s - true Z rotation
+double angleX;//deg - true X angle
+double angleY;//radians - Y angle
+double angleZ;//deg - true Z angle
+double rotatX;//deg/s - true X rotation
+double rotatZ;//deg/s - true Z rotation
 
 //integral of the position-time graph
-float intX;//deg*s - integral of X angle
-float intZ;//deg*s - integral of Z angle
+double intX;//deg*s - integral of X angle
+double intZ;//deg*s - integral of Z angle
 
-float pressure;//barometer currently not working
-float altitude;//barometer currently not working
+double pressure;//barometer currently not working
+double altitude;//barometer currently not working
 
 //ejection charge trigger
 int liftoffTime;//ms
@@ -100,7 +105,6 @@ void setup() {
     //charge capacitors
     delay(500);
 
-            
     //setup pins
     pinMode(LEDR, OUTPUT);
     pinMode(LEDB, OUTPUT);
@@ -206,9 +210,9 @@ void setup() {
         tstep = time1 - time0;
         tstepS = tstep/1000000.;
 
-        gyroXData = gX/32.800;
-        gyroYData = (gY/32.800) * 0.0174533; //convert degrees to radians
-        gyroZData = gZ/32.800;
+        gyroXData = gX/32.8;
+        gyroYData = (gY/32.8) * 0.0174533; //convert degrees to radians
+        gyroZData = gZ/32.8;
         angleY -= gyroYData*tstepS;
         rotatX = (gyroXData * cos(angleY)) + (gyroZData * sin(angleY));
         rotatZ = (gyroZData * cos(angleY)) + (gyroXData * sin(angleY));
@@ -243,9 +247,9 @@ void setup() {
             tstepS = tstep/1000000.;
 
             //pass in data, convert to deg/s, deg, and deg*s
-            gyroXData = gX/32.800;
-            gyroYData = (gY/32.800) * 0.0174533; //convert degrees to radians
-            gyroZData = gZ/32.800;
+            gyroXData = gX/32.8;
+            gyroYData = (gY/32.8) * 0.0174533; //convert degrees to radians
+            gyroZData = gZ/32.8;
             angleY -= gyroYData*tstepS;
             rotatX = (gyroXData * cos(angleY)) - (gyroZData * sin(angleY));
             rotatZ = (gyroZData * cos(angleY)) + (gyroXData * sin(angleY));
@@ -258,12 +262,12 @@ void setup() {
             TVC.control(angleY, rotatX, rotatZ, angleX, angleZ, intX, intZ);
             
             //record every other data point set
-            if(i%2 == 0 && count < 5000) {
+            if(i%2 == 0 && count < 2500) {
                 uTimeList[count] = tstep;
                 anglXList[count] = angleX;
                 anglZList[count] = angleZ;
-                gyroXList[count] = gyroYData/0.0174533;
-                gyroZList[count] = angleY/0.0174533;
+                gyroXList[count] = gyroXData;
+                gyroZList[count] = gyroZData;
                 sPosXList[count] = TVC.getPosX();
                 sPosZList[count] = TVC.getPosZ();
 
@@ -272,9 +276,8 @@ void setup() {
         }
 
         //check if the rocket has reached apogee or turned too far.
-        //commented out for static tests with no ejection charge
         //5s to apogee
-        if ((millis()-liftoffTime > 7000) || (abs(angleX) > 45) || (abs(angleZ) > 45)) {
+        if ((millis()-liftoffTime > 5000) || (abs(angleX) > 45) || (abs(angleZ) > 45)) {
 
             //open valve for 0.5s
             delay(100);

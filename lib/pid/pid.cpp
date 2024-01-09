@@ -47,23 +47,23 @@ PID::PID(Servo sX, Servo sZ, int pX, int pZ)
     servoZ.writeMicroseconds(1375);
 }
 
-float PID::getTPosX() {
+double PID::getTPosX() {
     return tPosX/17.86;
 }
 
-float PID::getTPosZ() {
+double PID::getTPosZ() {
     return tPosZ/17.86;
 }
 
-float PID::getPosX() {
+double PID::getPosX() {
     return posX/17.86;
 }
 
-float PID::getPosZ() {
+double PID::getPosZ() {
     return posZ/17.86;
 }
 
-void PID::control(float aY, float rX, float rZ, float aX, float aZ, float iX, float iZ) {
+void PID::control(double aY, double rX, double rZ, double aX, double aZ, double iX, double iZ) {
     rotX = rX;
     rotZ = rZ;
     angX = aX;
